@@ -1,5 +1,7 @@
 # job
 
+<p align="center"><img src="logo.png" alt="job — Go gopher holding a task card" width="240"></p>
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/uchaloop/job.svg)](https://pkg.go.dev/github.com/uchaloop/job) [![CI](https://github.com/uchaloop/job/actions/workflows/ci.yml/badge.svg)](https://github.com/uchaloop/job/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/tag/uchaloop/job?label=release)](https://github.com/uchaloop/job/tags) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [Install](#installation) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Configuration](#configuration) · [Examples](#documentation)

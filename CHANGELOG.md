@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-20
+
+- Add logo
+
 ## [0.2.0] - 2026-09-20
 
 - Add optional WithErrorHandler with an independent ErrorHandlerTimeout
@@ -48,3 +52,5 @@ whether a scheduler or a one-shot process runs it.
 [0.1.0]: https://github.com/uchaloop/job/releases/tag/v0.1.0
 
 [0.2.0]: https://github.com/uchaloop/job/compare/v0.1.0...v0.2.0
+
+[0.2.1]: https://github.com/uchaloop/job/compare/v0.2.0...v0.2.1
