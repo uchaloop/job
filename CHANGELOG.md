@@ -2,13 +2,13 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-20
+
 - Add optional WithErrorHandler with an independent ErrorHandlerTimeout
   (JOB_ERROR_HANDLER_TIMEOUT, default 1m). Only returned work errors trigger it.
 - Preserve work Err/Outcome and expose ErrorHandlerErr separately, including
   expired handler contexts. Duration now includes both stages; WorkDuration and
   ErrorHandlerDuration provide their individual timings.
-
-## [0.2.0] - 2026-09-20
 
 - **Breaking:** the Fx adapter now lives in `github.com/uchaloop/jobfx`.
   Use that independent module; this repository contains only the core library.
