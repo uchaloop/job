@@ -25,7 +25,7 @@
 //
 // # The timeout is cooperative
 //
-// Config.Timeout bounds the attempt's context. Like every deadline in Go it
+// Config.Timeout bounds the work context. Like every deadline in Go it
 // cancels; it cannot interrupt a running function. A [Func] must return when
 // its context is done, and must wait for its own goroutines first. One that
 // ignores cancellation holds its caller for as long as it likes, and no
@@ -36,6 +36,21 @@
 // success. The runner classifies the attempt before releasing its own context,
 // so a deadline or a cancellation is visible even when the work stayed quiet
 // about it.
+//
+// # Error processing
+//
+// WithErrorHandler registers an optional callback for non-nil errors returned
+// by the Func and middleware. It runs once after the work returns, with caller
+// context values but a fresh ErrorHandlerTimeout budget (default one minute).
+// Cancellation of the work or caller does not cancel error processing.
+// Already-cancelled input skips both stages; a nil work error never calls it.
+//
+// Result.Err and Outcome describe the work. ErrorHandlerErr separately reports
+// callback failure or deadline expiration, even if the callback returns nil.
+// Duration includes both stages; WorkDuration and ErrorHandlerDuration separate
+// them. Observability Handler delivery remains the caller's responsibility.
+// Shutdown budgets must allow error processing before closing dependencies.
+// A noncooperative callback still blocks Run; panics propagate to the caller.
 //
 // # Panics
 //

@@ -41,9 +41,19 @@ type Result struct {
 	// the caller's context was already done and the work was never called.
 	Start time.Time
 
-	// Duration is how long the chain took: the Func and its middleware, and
-	// nothing else. Result handlers are not part of it.
+	// Duration covers the whole attempt, including ErrorHandler when called.
+	// Observability handlers are not part of it.
 	Duration time.Duration
+
+	// WorkDuration measures the Func and middleware only.
+	WorkDuration time.Duration
+
+	// ErrorHandlerDuration measures the error callback, or zero when not called.
+	ErrorHandlerDuration time.Duration
+
+	// ErrorHandlerErr contains the callback error joined with any expiration
+	// of its context. Err and Outcome always describe the original work.
+	ErrorHandlerErr error
 
 	// Processed is the number of items the Func reported.
 	Processed int

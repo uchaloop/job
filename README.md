@@ -11,7 +11,7 @@ exits. [beat](https://github.com/uchaloop/beat) runs the same work repeatedly
 inside a long-lived process. Both drive the same `Runner`, so the work, its
 middleware, its timeout and its classification are written once.
 
-- **One attempt per call** - no retry, no goroutine of its own, no handler call.
+- **One attempt per call** - no retry, no goroutine of its own, no automatic observability Handler call.
 - **A cooperative timeout** - it cancels the attempt's context and says so even
   when the work stayed quiet about it.
 - **No dependencies** beyond the standard library and `uchaloop/validate`.
@@ -63,7 +63,10 @@ flowchart LR
     B -->|no| D["Apply timeout"]
     D --> E["Middleware → work"]
     E --> F["Measure and classify Result"]
-    F --> G["Caller observes and cleans up"]
+    F --> H{"Returned error and ErrorHandler configured?"}
+    H -->|yes| I["ErrorHandler: independent timeout"]
+    I --> G["Caller observes and cleans up"]
+    H -->|no| G
     C --> G
 ```
 
@@ -75,7 +78,9 @@ measuring nothing.
 
 | Field | Meaning |
 |---|---|
-| `Start`, `Duration` | When the chain ran and for how long. Handlers are not part of it |
+| `Start`, `Duration` | Start and total duration, including optional ErrorHandler |
+| `WorkDuration`, `ErrorHandlerDuration` | Time spent in each stage |
+| `ErrorHandlerErr` | Callback error and/or expired callback context, separate from the work error |
 | `Processed` | What the work reported, kept even when it then failed |
 | `Err` | The chain's error, which stays nil when a timeout cut a quiet Func short |
 | `Outcome` | `ok`, `error`, `panic`, `timeout` or `canceled` - authoritative |
@@ -98,6 +103,37 @@ this precedence after the chain returns:
 | `ok` | None of the above |
 
 A deadline can therefore produce `timeout` even when `Err` is nil.
+
+## Error handling
+
+An optional callback can log an error or persist application-defined data in a
+DLQ. The library does not define the message format or retry delivery.
+
+```go
+runner, err := job.MakeRunner(
+    job.Config{Timeout: time.Minute, ErrorHandlerTimeout: 15 * time.Second},
+    work,
+    job.WithErrorHandler(func(ctx context.Context, err error) error {
+        return failures.Store(ctx, err) // Application-owned storage and error model.
+    }),
+)
+```
+
+The callback runs synchronously once, only for a non-nil error returned by the
+work or middleware. It gets caller context values and a fresh deadline, without
+inheriting cancellation. A work timeout returning nil does not call it; work
+skipped because the caller was already cancelled does not call it either.
+
+> [!IMPORTANT]
+> Error processing has its own budget, even during shutdown. Allow time for both
+> stages before closing dependencies. Neither context can force code to return.
+
+`Err` and `Outcome` retain the original work result. `ErrorHandlerErr` reports
+callback failure, joining its returned error with context expiration. Successful
+DLQ delivery does not turn failed work into success. `Duration` includes both
+stages, so schedulers account for error processing too. Persistence and source
+acknowledgement remain application responsibilities; this callback alone does
+not guarantee delivery. Recovery middleware does not cover callback panics.
 
 ## Panics
 
@@ -153,6 +189,7 @@ configuration agreement protocol or automatic failover.
 | Field | Default env name | Default |
 |---|---|---|
 | `Timeout` | `JOB_TIMEOUT` | `1m` |
+| `ErrorHandlerTimeout` | `JOB_ERROR_HANDLER_TIMEOUT` | `1m` |
 
 `job.MakeRunner` accepts ordinary Go values and never reads the environment.
 The env name above applies only when using the optional loader below.
