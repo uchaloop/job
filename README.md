@@ -219,11 +219,6 @@ Import `github.com/uchaloop/confx` and include `confx.Module()` once per applica
 | [beat](https://github.com/uchaloop/beat) | Run the same work on a schedule |
 | [jobfx](https://github.com/uchaloop/jobfx) | Provide a Runner through Fx |
 
-## Acknowledgements
-
-Thanks to the [Go authors and contributors](https://go.dev/) for
-the context, time and testing primitives this library builds on.
-
 ## License
 
 [MIT](LICENSE)
