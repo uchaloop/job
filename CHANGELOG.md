@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-20
+
+- **Breaking:** the Fx adapter now lives in `github.com/uchaloop/jobfx`.
+  Use that independent module; this repository contains only the core library.
+- Updated documentation and CI for independent core and adapter releases.
+
 ## [0.1.0] - 2026-09-20
 
 Initial release. Execution split out of beat so one attempt means the same
@@ -32,5 +38,7 @@ whether a scheduler or a one-shot process runs it.
   owns the explicit sequence of start, run, observe, clean up and exit. Its
   `ExampleModule` walks through the whole of it.
 
-[Unreleased]: https://github.com/uchaloop/job/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/uchaloop/job/compare/v0.2.0...HEAD
 [0.1.0]: https://github.com/uchaloop/job/releases/tag/v0.1.0
+
+[0.2.0]: https://github.com/uchaloop/job/compare/v0.1.0...v0.2.0

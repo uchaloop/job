@@ -21,10 +21,11 @@ const (
 	// Result - it propagates to the caller.
 	OutcomePanic Outcome = "panic"
 
-	// OutcomeTimeout is an attempt cut off by Config.Timeout. It is reported
+	// OutcomeTimeout means the attempt context deadline expired, whether set
+	// by Config.Timeout or by an earlier caller deadline. It is reported
 	// even when the Func swallowed the cancellation and returned no error,
-	// because the deadline belongs to the runner and the runner can see it
-	// fire.
+	// because the runner checks the context before classifying the result.
+	// Cancellation is cooperative; the result is produced only after return.
 	OutcomeTimeout Outcome = "timeout"
 
 	// OutcomeCanceled is an attempt cut off by the caller's context - a
