@@ -21,10 +21,11 @@ const (
 	// Result - it propagates to the caller.
 	OutcomePanic Outcome = "panic"
 
-	// OutcomeTimeout is an attempt cut off by Config.Timeout. It is reported
+	// OutcomeTimeout means the attempt context deadline expired, whether set
+	// by Config.Timeout or by an earlier caller deadline. It is reported
 	// even when the Func swallowed the cancellation and returned no error,
-	// because the deadline belongs to the runner and the runner can see it
-	// fire.
+	// because the runner checks the context before classifying the result.
+	// Cancellation is cooperative; the result is produced only after return.
 	OutcomeTimeout Outcome = "timeout"
 
 	// OutcomeCanceled is an attempt cut off by the caller's context - a
@@ -40,9 +41,19 @@ type Result struct {
 	// the caller's context was already done and the work was never called.
 	Start time.Time
 
-	// Duration is how long the chain took: the Func and its middleware, and
-	// nothing else. Result handlers are not part of it.
+	// Duration covers the whole attempt, including ErrorHandler when called.
+	// Observability handlers are not part of it.
 	Duration time.Duration
+
+	// WorkDuration measures the Func and middleware only.
+	WorkDuration time.Duration
+
+	// ErrorHandlerDuration measures the error callback, or zero when not called.
+	ErrorHandlerDuration time.Duration
+
+	// ErrorHandlerErr contains the callback error joined with any expiration
+	// of its context. Err and Outcome always describe the original work.
+	ErrorHandlerErr error
 
 	// Processed is the number of items the Func reported.
 	Processed int

@@ -6,8 +6,11 @@ import (
 	"time"
 )
 
-// defaultTimeout bounds a single attempt when the configured Timeout is unset.
-const defaultTimeout = time.Minute
+// Default budgets for the two sequential execution stages.
+const (
+	defaultTimeout             = time.Minute
+	defaultErrorHandlerTimeout = time.Minute
+)
 
 // Runner executes one attempt per call to Run. It holds the resolved
 // configuration and the middleware chain, built once, so a caller that runs the
@@ -15,11 +18,13 @@ const defaultTimeout = time.Minute
 //
 // A Runner keeps no state between attempts. Concurrent calls to Run are the
 // caller's business: the runner serializes nothing, so they are safe only when
-// the Func and its middleware are. Separate runners for separate logical jobs
+// the Func, its middleware and ErrorHandler are. Separate runners for logical jobs
 // are simpler than one runner guarding shared state.
 type Runner struct {
-	fn      Func
-	timeout time.Duration
+	fn                  Func
+	timeout             time.Duration
+	errorHandler        ErrorHandler
+	errorHandlerTimeout time.Duration
 }
 
 // MakeRunner resolves cfg against opts and builds a Runner. fn is required.
@@ -44,18 +49,28 @@ func MakeRunner(cfg Config, fn Func, opts ...Option) (*Runner, error) {
 		timeout = defaultTimeout
 	}
 
-	return &Runner{fn: chain(fn, s.middleware), timeout: timeout}, nil
+	handlerTimeout := cfg.ErrorHandlerTimeout
+	if handlerTimeout == 0 {
+		handlerTimeout = defaultErrorHandlerTimeout
+	}
+
+	return &Runner{
+		fn:                  chain(fn, s.middleware),
+		timeout:             timeout,
+		errorHandler:        s.errorHandler,
+		errorHandlerTimeout: handlerTimeout,
+	}, nil
 }
 
 // Run performs one attempt and reports how it went.
 //
 // It calls the chain at most once, synchronously, on the calling goroutine, and
 // waits for it to return. There is no retry, no goroutine of its own and no
-// delivery to a handler: what to do with the Result, and when to attempt again,
-// belong to the caller.
+// delivery to an observability Handler: the caller owns the Result. An optional
+// ErrorHandler processes a returned error before Run returns.
 //
-// The attempt is bounded by the configured timeout, as far as a context can
-// bound anything - the deadline cancels the attempt, it cannot interrupt it. A
+// The work is bounded by Timeout, and error processing by ErrorHandlerTimeout.
+// Both deadlines cancel contexts without interrupting execution. A
 // caller's context that is already done skips the work entirely and reports why.
 func (r *Runner) Run(ctx context.Context) Result {
 	if err := ctx.Err(); err != nil {
@@ -69,17 +84,31 @@ func (r *Runner) Run(ctx context.Context) Result {
 
 	start := time.Now()
 	processed, err := r.fn(runCtx)
-	duration := time.Since(start)
+	workDuration := time.Since(start)
 
-	// Classified before the deferred cancel fires, so runCtx still tells the
-	// truth about whether the deadline or the caller cut the attempt short.
-	return Result{
-		Start:     start,
-		Duration:  duration,
-		Processed: processed,
-		Err:       err,
-		Outcome:   outcomeOf(runCtx, err),
+	result := Result{
+		Start:        start,
+		WorkDuration: workDuration,
+		Processed:    processed,
+		Err:          err,
+		Outcome:      outcomeOf(runCtx, err),
 	}
+
+	// Freeze the work outcome before error processing and release its timer.
+	cancel()
+
+	if err != nil && r.errorHandler != nil {
+		handlerCtx, cancelHandler := context.WithTimeout(context.WithoutCancel(ctx), r.errorHandlerTimeout)
+		defer cancelHandler()
+		handlerStart := time.Now()
+		handlerErr := r.errorHandler(handlerCtx, err)
+		result.ErrorHandlerDuration = time.Since(handlerStart)
+		result.ErrorHandlerErr = errors.Join(handlerErr, handlerCtx.Err())
+	}
+
+	result.Duration = time.Since(start)
+
+	return result
 }
 
 // outcomeOf classifies a finished attempt. A panic outranks the rest because it
