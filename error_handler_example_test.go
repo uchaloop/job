@@ -14,7 +14,7 @@ func ExampleWithErrorHandler() {
 	handled := false
 	runner, err := job.MakeRunner(
 		job.Config{Timeout: time.Minute, ErrorHandlerTimeout: 10 * time.Second},
-		func(context.Context) (int, error) { return 3, failure },
+		func(context.Context) (int64, error) { return 3, failure },
 		job.WithErrorHandler(func(ctx context.Context, err error) error {
 			// Replace with application-owned DLQ persistence or additional logging.
 			handled = errors.Is(err, failure)

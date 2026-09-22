@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254">
+  <defs>
+    <!-- everything above the line: the gopher is cut exactly along it -->
+    <clipPath id="above">
+      <path d="M0 0 H1254 V860 H650 L540 615 L400 860 H0 Z"/>
+    </clipPath>
+  </defs>
+  <rect width="1254" height="1254" fill="#fff"/>
+
+  <g clip-path="url(#above)">
+    <g transform="translate(815 640) rotate(12)" stroke="#0B1F3A" stroke-width="22" stroke-linejoin="round" stroke-linecap="round">
+      <!-- ears -->
+      <circle cx="-175" cy="-215" r="64" fill="#3DDCFF"/>
+      <circle cx="-175" cy="-215" r="32" fill="#06A6D6" stroke="none"/>
+      <circle cx="175" cy="-215" r="64" fill="#3DDCFF"/>
+      <circle cx="175" cy="-215" r="32" fill="#06A6D6" stroke="none"/>
+
+      <!-- body -->
+      <path d="M-225 0 A225 225 0 0 1 225 0 C230 110 250 210 260 400 H-260 C-250 210 -230 110 -225 0 Z" fill="#3DDCFF"/>
+      <path d="M-160 -140 A185 185 0 0 1 -30 -202" fill="none" stroke="#9BF0FF" stroke-width="18" opacity=".8"/>
+
+      <!-- eyes -->
+      <circle cx="-85" cy="-65" r="80" fill="#fff" stroke-width="18"/>
+      <circle cx="90" cy="-65" r="80" fill="#fff" stroke-width="18"/>
+      <circle cx="-108" cy="-54" r="31" fill="#0B1F3A" stroke="none"/>
+      <circle cx="67" cy="-54" r="31" fill="#0B1F3A" stroke="none"/>
+      <circle cx="-97" cy="-67" r="10" fill="#fff" stroke="none"/>
+      <circle cx="78" cy="-67" r="10" fill="#fff" stroke="none"/>
+
+      <!-- teeth, muzzle, nose -->
+      <rect x="-24" y="50" width="25" height="62" rx="6" fill="#fff" stroke-width="10"/>
+      <rect x="3" y="50" width="25" height="62" rx="6" fill="#fff" stroke-width="10"/>
+      <ellipse cx="2" cy="35" rx="56" ry="36" fill="#F6C99A" stroke-width="14"/>
+      <ellipse cx="2" cy="14" rx="26" ry="17" fill="#0B1F3A" stroke="none"/>
+    </g>
+  </g>
+
+  <!-- line with an end knob -->
+  <path d="M110 860 H400 L540 615 L650 860 H1060"
+        fill="none" stroke-linejoin="round" stroke-linecap="round" stroke="#0B1F3A" stroke-width="74"/>
+  <path d="M110 860 H400 L540 615 L650 860 H1060"
+        fill="none" stroke-linejoin="round" stroke-linecap="round" stroke="#3DDCFF" stroke-width="40"/>
+  <circle cx="1110" cy="860" r="62" fill="#3DDCFF" stroke="#0B1F3A" stroke-width="20"/>
+  <ellipse cx="1132" cy="836" rx="15" ry="11" fill="#fff" transform="rotate(-30 1132 836)"/>
+
+  <!-- paws: one on the peak, one on the line -->
+  <g stroke="#0B1F3A" stroke-width="14" stroke-linecap="round">
+    <ellipse cx="535" cy="586" rx="44" ry="34" fill="#F6C99A" transform="rotate(-10 535 586)"/>
+    <path d="M521 596 v12 M549 596 v12" fill="none" stroke-width="9"/>
+    <ellipse cx="905" cy="836" rx="44" ry="34" fill="#F6C99A"/>
+    <path d="M891 846 v12 M919 846 v12" fill="none" stroke-width="9"/>
+  </g>
+</svg>

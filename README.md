@@ -1,6 +1,7 @@
 # job
 
-<p align="center"><img src="logo.png" alt="job — Go gopher holding a task card" width="240"></p>
+<!--suppress HtmlDeprecatedAttribute -->
+<p align="center"><img src="logo.svg" alt="job — Go gopher peeking over a line" width="240"></p>
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/uchaloop/job.svg)](https://pkg.go.dev/github.com/uchaloop/job) [![CI](https://github.com/uchaloop/job/actions/workflows/ci.yml/badge.svg)](https://github.com/uchaloop/job/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/tag/uchaloop/job?label=release)](https://github.com/uchaloop/job/tags) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -42,7 +43,7 @@ import (
 func main() {
     runner, err := job.MakeRunner(
         job.Config{Timeout: 3 * time.Minute},
-        func(ctx context.Context) (int, error) {
+        func(ctx context.Context) (int64, error) {
             // Replace with one batch of application work.
             return 0, ctx.Err()
         },
@@ -82,10 +83,15 @@ measuring nothing.
 |---|---|
 | `Start`, `Duration` | Start and total duration, including optional ErrorHandler |
 | `WorkDuration`, `ErrorHandlerDuration` | Time spent in each stage |
+| `ErrorHandlerCalled` | Whether error processing ran, even if its duration is zero |
 | `ErrorHandlerErr` | Callback error and/or expired callback context, separate from the work error |
 | `Processed` | What the work reported, kept even when it then failed |
 | `Err` | The chain's error, which stays nil when a timeout cut a quiet Func short |
 | `Outcome` | `ok`, `error`, `panic`, `timeout` or `canceled` - authoritative |
+
+`Func` returns an `int64` count, stored unchanged in `Result.Processed`, including
+partial progress on error. Return zero or more; the runner does not validate or
+clamp the count. For slice lengths, use `int64(len(items))`.
 
 > [!IMPORTANT]
 > A timeout cancels the context; it cannot interrupt the function.
@@ -181,9 +187,16 @@ The caller passes the **scheduled point**, never the current time, so a pod that
 starts late and a retry of the same scheduled Job decide as the original point
 did.
 
+`Decision.Slot` is a non-negative `uint64`. Scheduled points must be on the
+epoch-anchored grid, from the Unix epoch through epoch + `MaxInt64` nanoseconds.
+`OwnedAfter(after, count)` counts this cluster's slots among the `count` positions
+following `after`, excluding `after` itself. It returns `uint64` and never adds
+the two arguments, so counting remains safe even when their sum exceeds `MaxUint64`.
+
 Changing the cluster list or period can produce duplicates or gaps while old
-and new configurations coexist. Stop scheduling across all clusters, update
-the configuration everywhere, then resume; accept the pause. There is no
+and new configurations coexist. Stop scheduling across all clusters and wait for
+old attempts to finish, update the configuration everywhere, then resume; accept
+the pause. A rolling restart is not sufficient. There is no
 configuration agreement protocol or automatic failover.
 
 ## Configuration

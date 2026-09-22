@@ -48,6 +48,10 @@ type Result struct {
 	// WorkDuration measures the Func and middleware only.
 	WorkDuration time.Duration
 
+	// ErrorHandlerCalled distinguishes an invoked callback from an absent one,
+	// including callbacks that finish without advancing the clock.
+	ErrorHandlerCalled bool
+
 	// ErrorHandlerDuration measures the error callback, or zero when not called.
 	ErrorHandlerDuration time.Duration
 
@@ -55,8 +59,10 @@ type Result struct {
 	// of its context. Err and Outcome always describe the original work.
 	ErrorHandlerErr error
 
-	// Processed is the number of items the Func reported.
-	Processed int
+	// Processed is the number of items the Func reported, including partial
+	// progress on failure. Values should be non-negative; the runner preserves
+	// them unchanged. Callers are responsible for supplying valid counts.
+	Processed int64
 
 	// Err is the error the chain returned, or nil. It stays nil when a timeout
 	// or a cancellation cut a Func short that chose to report no error, which

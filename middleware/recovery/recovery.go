@@ -15,8 +15,8 @@ The recovered value and its stack are reported as a *job.PanicError in the
 attempt's error, and the Result reads job.OutcomePanic, so a handler tells a
 panic from an ordinary failure without unwrapping anything. The value itself is
 reachable with errors.AsType[*job.PanicError](result.Err). [WithLogger]
-additionally logs it where it happened, with the stack, which is the only place
-the stack is still complete.
+additionally logs it immediately. Logging is optional: PanicError.Stack retains
+the captured stack for downstream handlers to inspect or record later.
 */
 package recovery
 
@@ -54,7 +54,7 @@ func Middleware(opts ...Option) job.Middleware {
 	}
 
 	return func(next job.Func) job.Func {
-		return func(ctx context.Context) (processed int, err error) {
+		return func(ctx context.Context) (processed int64, err error) {
 			defer func() {
 				if p := recover(); p != nil {
 					stack := debug.Stack()

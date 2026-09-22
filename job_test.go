@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-func noop(context.Context) (int, error) { return 0, nil }
+func noop(context.Context) (int64, error) { return 0, nil }
 
 func TestChain_FirstMiddlewareIsOutermost(t *testing.T) {
 	var order []string
 
 	mw := func(name string) Middleware {
 		return func(next Func) Func {
-			return func(ctx context.Context) (int, error) {
+			return func(ctx context.Context) (int64, error) {
 				order = append(order, name)
 
 				return next(ctx)
@@ -22,7 +22,7 @@ func TestChain_FirstMiddlewareIsOutermost(t *testing.T) {
 	}
 
 	fn := chain(
-		func(context.Context) (int, error) {
+		func(context.Context) (int64, error) {
 			order = append(order, "work")
 
 			return 0, nil
@@ -42,7 +42,7 @@ func TestChain_FirstMiddlewareIsOutermost(t *testing.T) {
 func TestChain_SkipsNil(t *testing.T) {
 	called := false
 	fn := chain(
-		func(context.Context) (int, error) { called = true; return 0, nil },
+		func(context.Context) (int64, error) { called = true; return 0, nil },
 		[]Middleware{nil, nil},
 	)
 
