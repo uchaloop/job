@@ -98,6 +98,7 @@ func (r *Runner) Run(ctx context.Context) Result {
 	cancel()
 
 	if err != nil && r.errorHandler != nil {
+		result.ErrorHandlerCalled = true
 		handlerCtx, cancelHandler := context.WithTimeout(context.WithoutCancel(ctx), r.errorHandlerTimeout)
 		defer cancelHandler()
 		handlerStart := time.Now()

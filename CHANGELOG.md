@@ -1,6 +1,27 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0] - 2026-09-22
+
+### Breaking changes
+
+- Change `Func` and `Result.Processed` to `int64` processed-item counts. The
+  runner preserves returned values unchanged; callers should report nonnegative counts.
+- Change `assignment.Decision.Slot` to `uint64`. Replace `OwnedBetween` with
+  `OwnedAfter(after, count uint64) uint64`, using overflow-safe constant-time
+  counting without adding a slot number to a count. The supported time range
+  of `Decide` is unchanged.
+
+### Added
+
+- Add `Result.ErrorHandlerCalled` to distinguish an invoked, zero-duration
+  error callback from an attempt without error processing.
+
+### Documentation
+
+- Clarify that topology changes require stopping all old participants and
+  waiting for their attempts before starting the new configuration.
+- Clarify that `PanicError` retains its stack without requiring immediate logging.
+- Refresh the README logo with an SVG.
 
 ## [0.2.1] - 2026-09-20
 
@@ -48,9 +69,10 @@ whether a scheduler or a one-shot process runs it.
   owns the explicit sequence of start, run, observe, clean up and exit. Its
   `ExampleModule` walks through the whole of it.
 
-[Unreleased]: https://github.com/uchaloop/job/compare/v0.2.0...HEAD
 [0.1.0]: https://github.com/uchaloop/job/releases/tag/v0.1.0
 
 [0.2.0]: https://github.com/uchaloop/job/compare/v0.1.0...v0.2.0
 
 [0.2.1]: https://github.com/uchaloop/job/compare/v0.2.0...v0.2.1
+
+[0.3.0]: https://github.com/uchaloop/job/compare/v0.2.1...v0.3.0

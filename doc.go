@@ -8,7 +8,7 @@
 //
 //	runner, err := job.MakeRunner(
 //		job.Config{Timeout: 3 * time.Minute},
-//		func(ctx context.Context) (int, error) {
+//		func(ctx context.Context) (int64, error) {
 //			return queue.ProcessBatch(ctx, 1000)
 //		},
 //		job.WithMiddleware(recovery.Middleware()),

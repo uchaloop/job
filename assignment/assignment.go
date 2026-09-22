@@ -44,10 +44,12 @@ for the rotation to divide anything. Nothing here checks that they are, so a
 rolling update, with the old and the new configuration deciding side by side,
 produces duplicates and gaps at the same time.
 
-Change the topology by restarting every pod in every cluster, and accept the
-pause in the schedule while that happens. There is no hot reconfiguration and no
-agreement protocol, by choice: either one would need exactly the shared state
-this package exists without.
+Before changing the topology or period, stop scheduling in every cluster and
+wait for all old attempts to finish. Then start every participant with the same
+new configuration, accepting the pause. A rolling restart is not sufficient:
+old and new configurations must not execute side by side. There is no hot
+reconfiguration and no agreement protocol, by choice: either one would need
+exactly the shared state this package exists without.
 
 # What it needs from the caller
 
@@ -96,7 +98,7 @@ type Invocation struct {
 // Decision is what the policy concluded about one point.
 type Decision struct {
 	Invocation Invocation
-	Slot       int64
+	Slot       uint64
 	Owner      string
 	Execute    bool
 }
@@ -110,7 +112,7 @@ type Rotation struct {
 
 	// ownRemainder is the remainder every slot of this process leaves: the point
 	// is ours exactly when slot % len(clusters) equals it.
-	ownRemainder int64
+	ownRemainder uint64
 }
 
 // MakeRotation validates cfg and returns the policy it describes. The cluster
@@ -152,7 +154,7 @@ func MakeRotation(cfg Config) (*Rotation, error) {
 		clusters:     clusters,
 		current:      cfg.Current,
 		period:       cfg.Period,
-		ownRemainder: int64(slices.Index(clusters, cfg.Current)),
+		ownRemainder: uint64(slices.Index(clusters, cfg.Current)),
 	}, nil
 }
 
@@ -171,6 +173,8 @@ func (r *Rotation) Current() string { return r.current }
 // Decide reports who owns the given point and whether this process should run
 // it. An invocation that is not a point of the configured grid is an error, not
 // a silent yes or no.
+// Supported instants range from the Unix epoch through epoch + MaxInt64
+// nanoseconds, inclusive. The unsigned Slot does not extend this time range.
 func (r *Rotation) Decide(in Invocation) (Decision, error) {
 	if in.ScheduledFor.IsZero() {
 		return Decision{}, errors.New("scheduled point is required")
@@ -186,8 +190,8 @@ func (r *Rotation) Decide(in Invocation) (Decision, error) {
 		return Decision{}, fmt.Errorf("scheduled point %v is not on the %v grid", in.ScheduledFor, r.period)
 	}
 
-	slot := elapsed / period
-	owner := r.clusters[slot%int64(len(r.clusters))]
+	slot := uint64(elapsed / period)
+	owner := r.clusters[slot%uint64(len(r.clusters))]
 
 	return Decision{
 		Invocation: in,
@@ -197,32 +201,34 @@ func (r *Rotation) Decide(in Invocation) (Decision, error) {
 	}, nil
 }
 
-// OwnedBetween reports how many of the slots in (from, to] belong to this
-// process. It is the arithmetic a scheduler needs to say how many of its own
-// scheduled points went by unserved, without walking each one: a clock that
-// jumped a day must not cost a day of iterations.
+// OwnedAfter reports how many of count consecutive slots following after
+// belong to this process. The starting slot is excluded; a zero count
+// reports zero. The result never exceeds count.
 //
-// An empty or reversed range reports zero.
-func (r *Rotation) OwnedBetween(from, to int64) int {
-	if to <= from {
-		return 0
+// It uses constant-time cyclic arithmetic without computing after + count.
+// Both arguments may span uint64's full range: the mathematical sequence can
+// extend beyond MaxUint64 without wrapping the slot numbering to zero.
+// This counting operation does not extend the time range accepted by Decide.
+func (r *Rotation) OwnedAfter(after, count uint64) uint64 {
+	clusters := uint64(len(r.clusters))
+	owned := count / clusters
+	tail := count % clusters
+	position := after % clusters
+
+	// Distance to our next slot lies in [1, clusters], never zero: after
+	// is excluded even when it is one of our own slots.
+	var distance uint64
+	if r.ownRemainder > position {
+		distance = r.ownRemainder - position
+	} else {
+		distance = clusters - (position - r.ownRemainder)
 	}
 
-	count := len(r.clusters)
-
-	return int(floorDiv(to-r.ownRemainder, int64(count)) - floorDiv(from-r.ownRemainder, int64(count)))
-}
-
-// floorDiv divides rounding towards negative infinity, which Go's / does not do
-// for negative numerators - and the numerator here is negative whenever the
-// range starts before this process's first owned slot.
-func floorDiv(a, b int64) int64 {
-	q := a / b
-	if a%b != 0 && (a < 0) != (b < 0) {
-		q--
+	if distance <= tail {
+		owned++
 	}
 
-	return q
+	return owned
 }
 
 // nanosSinceEpoch converts t to nanoseconds since the Unix epoch without the

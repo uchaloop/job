@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -20,7 +21,7 @@ func mustRunner(t *testing.T, cfg Config, fn Func, opts ...Option) *Runner {
 }
 
 func TestRun_ReportsTheWork(t *testing.T) {
-	r := mustRunner(t, Config{}, func(context.Context) (int, error) { return 7, nil })
+	r := mustRunner(t, Config{}, func(context.Context) (int64, error) { return 7, nil })
 
 	result := r.Run(context.Background())
 
@@ -41,7 +42,7 @@ func TestRun_ReportsTheWork(t *testing.T) {
 // A partial batch that then fails still reports what it managed to do.
 func TestRun_ErrorKeepsPartialProcessed(t *testing.T) {
 	boom := errors.New("boom")
-	r := mustRunner(t, Config{}, func(context.Context) (int, error) { return 4, boom })
+	r := mustRunner(t, Config{}, func(context.Context) (int64, error) { return 4, boom })
 
 	result := r.Run(context.Background())
 
@@ -61,7 +62,7 @@ func TestRun_ErrorKeepsPartialProcessed(t *testing.T) {
 func TestRun_TimeoutWaitsAndIsReportedAnyway(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		r := mustRunner(t, Config{Timeout: 100 * time.Millisecond},
-			func(context.Context) (int, error) {
+			func(context.Context) (int64, error) {
 				time.Sleep(300 * time.Millisecond) // ignores cancellation
 
 				return 3, nil
@@ -93,7 +94,7 @@ func TestRun_CallerCancellation(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		r := mustRunner(t, Config{Timeout: time.Minute},
-			func(ctx context.Context) (int, error) {
+			func(ctx context.Context) (int64, error) {
 				<-ctx.Done()
 
 				return 0, ctx.Err()
@@ -116,7 +117,7 @@ func TestRun_CallerCancellation(t *testing.T) {
 // nothing is measured.
 func TestRun_DoneContextSkipsTheWork(t *testing.T) {
 	called := false
-	r := mustRunner(t, Config{}, func(context.Context) (int, error) {
+	r := mustRunner(t, Config{}, func(context.Context) (int64, error) {
 		called = true
 
 		return 9, nil
@@ -144,7 +145,7 @@ func TestRun_DoneContextSkipsTheWork(t *testing.T) {
 // One Run is one attempt - no retry hides inside it - and a Runner is reusable.
 func TestRun_OneAttemptPerCall(t *testing.T) {
 	calls := 0
-	r := mustRunner(t, Config{}, func(context.Context) (int, error) {
+	r := mustRunner(t, Config{}, func(context.Context) (int64, error) {
 		calls++
 
 		return 0, errors.New("always fails")
@@ -162,7 +163,7 @@ func TestRun_OneAttemptPerCall(t *testing.T) {
 }
 
 func TestRun_PanicPropagatesWithoutRecovery(t *testing.T) {
-	r := mustRunner(t, Config{}, func(context.Context) (int, error) { panic("boom") })
+	r := mustRunner(t, Config{}, func(context.Context) (int64, error) { panic("boom") })
 
 	defer func() {
 		if p := recover(); p == nil {
@@ -187,5 +188,18 @@ func TestMakeRunner_DefaultsTheTimeout(t *testing.T) {
 
 	if r.timeout != defaultTimeout {
 		t.Errorf("timeout = %v, want %v", r.timeout, defaultTimeout)
+	}
+}
+
+func TestRun_PreservesInt64CountOnError(t *testing.T) {
+	workErr := errors.New("partial failure")
+	for _, count := range []int64{0, 1 << 40, math.MaxInt64, -1} {
+		runner := mustRunner(t, Config{}, func(context.Context) (int64, error) {
+			return count, workErr
+		}, WithErrorHandler(func(context.Context, error) error { return nil }))
+		result := runner.Run(context.Background())
+		if result.Processed != count || result.Outcome != OutcomeError || !errors.Is(result.Err, workErr) {
+			t.Fatalf("count=%d result=%+v", count, result)
+		}
 	}
 }

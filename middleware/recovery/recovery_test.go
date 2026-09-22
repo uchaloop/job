@@ -15,7 +15,7 @@ import (
 func TestMiddleware_TurnsAPanicIntoAResult(t *testing.T) {
 	runner, err := job.MakeRunner(
 		job.Config{},
-		func(context.Context) (int, error) { panic("boom") },
+		func(context.Context) (int64, error) { panic("boom") },
 		job.WithMiddleware(recovery.Middleware()),
 	)
 	if err != nil {
@@ -48,7 +48,7 @@ func TestMiddleware_LogsWhenAsked(t *testing.T) {
 
 	runner, err := job.MakeRunner(
 		job.Config{},
-		func(context.Context) (int, error) { panic("boom") },
+		func(context.Context) (int64, error) { panic("boom") },
 		job.WithMiddleware(recovery.Middleware(recovery.WithLogger(logger))),
 	)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestMiddleware_LogsWhenAsked(t *testing.T) {
 func TestMiddleware_LetsOrdinaryResultsThrough(t *testing.T) {
 	runner, err := job.MakeRunner(
 		job.Config{},
-		func(context.Context) (int, error) { return 5, nil },
+		func(context.Context) (int64, error) { return 5, nil },
 		job.WithMiddleware(recovery.Middleware(), nil),
 	)
 	if err != nil {

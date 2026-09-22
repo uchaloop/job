@@ -2,6 +2,8 @@ package assignment
 
 import (
 	"math"
+	"math/big"
+	"math/rand/v2"
 	"testing"
 	"time"
 )
@@ -86,7 +88,7 @@ func TestDecide_PermutationsAgree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Decide: %v", err)
 			}
-			if decision.Slot != slot {
+			if decision.Slot != uint64(slot) {
 				t.Fatalf("Slot = %d, want %d", decision.Slot, slot)
 			}
 
@@ -228,64 +230,102 @@ func TestDecide_LocationDoesNotChangeTheOwner(t *testing.T) {
 	}
 }
 
-func TestOwnedBetween(t *testing.T) {
-	// Sorted: dm, el, xc - so el owns slots 1, 4, 7, ...
+func TestOwnedAfter(t *testing.T) {
 	rotation := mustRotation(t, Config{
-		Clusters: []string{"el", "xc", "dm"},
-		Current:  "el",
-		Period:   time.Minute,
+		Clusters: []string{"el", "xc", "dm"}, Current: "el", Period: time.Minute,
 	})
-
+	// Sorted: dm, el, xc. el owns slots 1, 4, 7, ...
 	tests := []struct {
-		name     string
-		from, to int64
-		want     int
+		name               string
+		after, count, want uint64
 	}{
-		{"empty range", 3, 3, 0},
-		{"reversed range", 5, 2, 0},
-		{"one foreign slot", 2, 3, 0},
-		{"one owned slot", 3, 4, 1},
-		{"a full turn is one of mine", 1, 4, 1},
-		{"two turns", 1, 7, 2},
-		{"across the start", 0, 10, 4}, // slots 1, 4, 7, 10
-		{"a day of one-minute slots", 0, 1440, 480},
+		{"empty", 3, 0, 0},
+		{"foreign", 2, 1, 0},
+		{"own", 3, 1, 1},
+		{"exclude starting slot", 1, 1, 0},
+		{"full turn", 1, 3, 1},
+		{"two turns", 1, 6, 2},
+		{"across start", 0, 10, 4},
+		{"a day", 0, 1440, 480},
+		{"beyond maximum slot", math.MaxUint64, 1, 1},
+		{"maximum count", math.MaxUint64, math.MaxUint64, math.MaxUint64 / 3},
 	}
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := rotation.OwnedBetween(tc.from, tc.to); got != tc.want {
-				t.Errorf("OwnedBetween(%d, %d) = %d, want %d", tc.from, tc.to, got, tc.want)
+			if got := rotation.OwnedAfter(tc.after, tc.count); got != tc.want {
+				t.Fatalf("OwnedAfter(%d, %d) = %d, want %d", tc.after, tc.count, got, tc.want)
 			}
 		})
 	}
+	single := mustRotation(t, Config{Clusters: []string{"el"}, Current: "el", Period: time.Second})
+	if got := single.OwnedAfter(math.MaxUint64, math.MaxUint64); got != math.MaxUint64 {
+		t.Fatalf("single cluster count = %d", got)
+	}
 }
 
-// The arithmetic must agree with counting the slots one by one.
-func TestOwnedBetween_MatchesAWalk(t *testing.T) {
-	rotation := mustRotation(t, Config{
-		Clusters: []string{"el", "xc", "dm"},
-		Current:  "el",
-		Period:   time.Minute,
-	})
-
-	for from := range int64(12) {
-		for to := from; to < 24; to++ {
-			want := 0
-			for slot := from + 1; slot <= to; slot++ {
-				decision, err := rotation.Decide(Invocation{
-					ScheduledFor: at(time.Duration(slot) * time.Minute),
-				})
-				if err != nil {
-					t.Fatalf("Decide: %v", err)
+func TestOwnedAfter_MatchesAWalk(t *testing.T) {
+	names := []string{"dm", "el", "xc"}
+	for _, name := range names {
+		rotation := mustRotation(t, Config{Clusters: names, Current: name, Period: time.Minute})
+		for after := range uint64(12) {
+			for count := range uint64(24) {
+				var want uint64
+				for slot := after + 1; slot <= after+count; slot++ {
+					decision, err := rotation.Decide(Invocation{ScheduledFor: at(time.Duration(slot) * time.Minute)})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if decision.Execute {
+						want++
+					}
 				}
-				if decision.Execute {
-					want++
+				if got := rotation.OwnedAfter(after, count); got != want {
+					t.Fatalf("%s OwnedAfter(%d, %d) = %d, want %d", name, after, count, got, want)
 				}
-			}
-
-			if got := rotation.OwnedBetween(from, to); got != want {
-				t.Fatalf("OwnedBetween(%d, %d) = %d, walk says %d", from, to, got, want)
 			}
 		}
+	}
+}
+
+// A big-integer interval is an independent oracle: unlike uint64, its end
+// cannot overflow even when both inputs are MaxUint64.
+func TestOwnedAfter_MatchesUnboundedInterval(t *testing.T) {
+	rng := rand.New(rand.NewPCG(73, 99))
+	names := []string{"a", "b", "c", "d", "e", "f", "g"}
+	for size := 1; size <= len(names); size++ {
+		for owner := range size {
+			rotation := mustRotation(t, Config{Clusters: names[:size], Current: names[owner], Period: time.Second})
+			for trial := range 1000 {
+				after, count := rng.Uint64(), rng.Uint64()
+				if trial == 0 {
+					after, count = math.MaxUint64, math.MaxUint64
+				}
+				if trial == 1 {
+					after, count = 0, math.MaxUint64
+				}
+				divisor := big.NewInt(int64(size))
+				lower := new(big.Int).SetUint64(after)
+				lower.Sub(lower, big.NewInt(int64(owner)))
+				upper := new(big.Int).Add(lower, new(big.Int).SetUint64(count))
+				upper.Div(upper, divisor)
+				lower.Div(lower, divisor)
+				want := upper.Sub(upper, lower).Uint64()
+				if got := rotation.OwnedAfter(after, count); got != want || got > count {
+					t.Fatalf("size=%d owner=%d after=%d count=%d got=%d want=%d", size, owner, after, count, got, want)
+				}
+			}
+		}
+	}
+}
+
+func TestDecide_LastRepresentableNanosecond(t *testing.T) {
+	rotation := mustRotation(t, Config{Clusters: []string{"el"}, Current: "el", Period: time.Nanosecond})
+	last := time.Unix(0, math.MaxInt64)
+	decision, err := rotation.Decide(Invocation{ScheduledFor: last})
+	if err != nil || decision.Slot != uint64(math.MaxInt64) {
+		t.Fatalf("decision=%+v err=%v", decision, err)
+	}
+	if _, err := rotation.Decide(Invocation{ScheduledFor: last.Add(time.Nanosecond)}); err == nil {
+		t.Fatal("accepted a point beyond the supported time range")
 	}
 }
