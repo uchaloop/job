@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+## [0.3.1]
+
+- Removed `Config.ConfigName`; applications now register an explicit instance name.
+- Added `envDescription` to all ENV fields and updated examples for confmaker
+  v0.9.0 / confx v0.3.0. Existing ENV names and required/optional rules are unchanged.
+
 ## [0.3.0] - 2026-09-22
 
 ### Breaking changes
@@ -69,10 +77,11 @@ whether a scheduler or a one-shot process runs it.
   owns the explicit sequence of start, run, observe, clean up and exit. Its
   `ExampleModule` walks through the whole of it.
 
+[0.3.1]: https://github.com/uchaloop/job/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/uchaloop/job/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/uchaloop/job/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/uchaloop/job/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/uchaloop/job/releases/tag/v0.1.0
 
-[0.2.0]: https://github.com/uchaloop/job/compare/v0.1.0...v0.2.0
 
-[0.2.1]: https://github.com/uchaloop/job/compare/v0.2.0...v0.2.1
 
-[0.3.0]: https://github.com/uchaloop/job/compare/v0.2.1...v0.3.0

@@ -242,7 +242,7 @@ documentation:
 The ordinary `job.Config{...}` in the quick start can be replaced with:
 
 ```go
-cfg, err := confmaker.Load[job.Config]()
+cfg, err := confmaker.Load[job.Config]("job")
 if err != nil {
     return err
 }
@@ -257,7 +257,7 @@ For an Fx application, replace `fx.Supply(job.Config{...})` with:
 
 ```go
 confx.Module(),
-confx.Provide[job.Config](),
+confx.Provide[job.Config]("job"),
 ```
 
 Import `github.com/uchaloop/confx` and include `confx.Module()` once per application.

@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-func TestConfigNameIsJob(t *testing.T) {
-	if got := (Config{}).ConfigName(); got != "job" {
-		t.Fatalf("ConfigName() = %q, want job", got)
-	}
-}
-
 func TestConfigValidate(t *testing.T) {
 	tests := []struct {
 		name string
