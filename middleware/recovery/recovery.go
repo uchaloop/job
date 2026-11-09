@@ -17,6 +17,8 @@ panic from an ordinary failure without unwrapping anything. The value itself is
 reachable with errors.AsType[*job.PanicError](result.Err). [WithLogger]
 additionally logs a fixed message immediately, without the value or stack. Logging is optional: PanicError.Stack retains
 the captured stack for downstream handlers to inspect or record later.
+
+Deprecated: Use github.com/uchaloop/beat/job/middleware/recovery instead.
 */
 package recovery
 

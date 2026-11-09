@@ -1,5 +1,8 @@
 # job
 
+> **Deprecated:** Use [`github.com/uchaloop/beat/job`](https://pkg.go.dev/github.com/uchaloop/beat/job) instead.
+> The implementation now lives in beat. See [Migration](#migration).
+
 <!--suppress HtmlDeprecatedAttribute -->
 <p align="center"><img src="logo.svg" alt="job - Go gopher peeking over a line" width="240"></p>
 
@@ -11,19 +14,38 @@ One attempt at a piece of work, and nothing about when the next one happens.
 
 A short-lived process started by a Kubernetes CronJob runs one attempt and
 exits. [beat](https://github.com/uchaloop/beat) runs the same work repeatedly
-inside a long-lived process. Both drive the same `Runner`, so the work, its
-middleware, its timeout and its classification are written once.
+inside a long-lived process. Current beat releases use `beat/job.Runner`; this standalone package is retained
+for existing applications.
 
 - **One attempt per call** - no retry, no goroutine of its own, no automatic observability Handler call.
 - **A cooperative timeout** - it cancels the attempt's context and says so even
   when the work stayed quiet about it.
 - **No dependencies** beyond the standard library and `uchaloop/validate`.
 
+## Migration
+
+Update related imports together:
+
+| Old import | Replacement |
+|---|---|
+| `github.com/uchaloop/job` | `github.com/uchaloop/beat/job` |
+| `github.com/uchaloop/job/assignment` | `github.com/uchaloop/beat/assignment` |
+| `github.com/uchaloop/job/middleware/recovery` | `github.com/uchaloop/beat/job/middleware/recovery` |
+
+```sh
+go get github.com/uchaloop/beat@latest
+```
+
+The package names remain the same. Old and new named types have different
+Go identities: update providers, handlers, middleware and assignment policies
+together rather than mixing old and new packages in one Fx graph.
+This deprecation does not change the old API or runtime behavior.
+See the [replacement documentation](https://github.com/uchaloop/beat/blob/main/docs/job/README.md) for the current API and examples.
+
 ## Installation
 
-Requires Go 1.27 or later. This README describes the current branch, including
-unreleased API renames listed in [CHANGELOG](CHANGELOG.md). Published releases
-retain their tagged API.
+Requires Go 1.27 or later. The remaining examples document the deprecated
+standalone module for existing users. For new code, follow Migration above.
 
 ```bash
 go get github.com/uchaloop/job
