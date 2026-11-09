@@ -7,7 +7,7 @@ import (
 )
 
 // Config is the configuration job declares. The env tags are inert strings: an
-// application loads them with github.com/uchaloop/confmaker and provides the
+// application loads them with github.com/uchaloop/confmaker/v2 and provides the
 // filled Config. job itself never reads the environment.
 // Register with the explicit instance name "job" to read JOB_*.
 type Config struct {

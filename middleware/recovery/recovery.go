@@ -9,13 +9,13 @@ kills. That default is wrong for work that touches input it does not control,
 where a single malformed record should not stop every later attempt. This
 middleware is how that choice is made explicitly rather than by default.
 
-	job.WithMiddleware(recovery.Middleware(recovery.WithLogger(logger)))
+	job.WithMiddleware(recovery.MakeMiddleware(recovery.WithLogger(logger)))
 
 The recovered value and its stack are reported as a *job.PanicError in the
 attempt's error, and the Result reads job.OutcomePanic, so a handler tells a
 panic from an ordinary failure without unwrapping anything. The value itself is
 reachable with errors.AsType[*job.PanicError](result.Err). [WithLogger]
-additionally logs it immediately. Logging is optional: PanicError.Stack retains
+additionally logs a fixed message immediately, without the value or stack. Logging is optional: PanicError.Stack retains
 the captured stack for downstream handlers to inspect or record later.
 */
 package recovery
@@ -32,20 +32,20 @@ type settings struct {
 	log *slog.Logger
 }
 
-// Option configures the middleware built by Middleware.
+// Option configures the middleware built by MakeMiddleware.
 type Option func(*settings)
 
-// WithLogger logs each recovered panic, with its stack, at Error level. A nil
+// WithLogger logs a fixed panic message at Error level, without value or stack. A nil
 // logger (the default) disables logging.
 func WithLogger(l *slog.Logger) Option {
 	return func(s *settings) { s.log = l }
 }
 
-// Middleware recovers from a panic in the wrapped work so the caller keeps
+// MakeMiddleware recovers from a panic in the wrapped work so the caller keeps
 // going. The panic becomes the attempt's error - always a *job.PanicError
 // carrying the value and stack, so downstream handlers can classify it - and,
-// if WithLogger is set, is logged with its stack.
-func Middleware(opts ...Option) job.Middleware {
+// if WithLogger is set, a fixed message is logged without sensitive details.
+func MakeMiddleware(opts ...Option) job.Middleware {
 	var s settings
 	for _, o := range opts {
 		if o != nil {
@@ -60,7 +60,7 @@ func Middleware(opts ...Option) job.Middleware {
 					stack := debug.Stack()
 
 					if s.log != nil {
-						s.log.Error("job panic recovered", "panic", p, "stack", string(stack))
+						s.log.Error("panic recovered")
 					}
 
 					err = &job.PanicError{Value: p, Stack: stack}

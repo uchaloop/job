@@ -40,16 +40,16 @@ func TestChain_FirstMiddlewareIsOutermost(t *testing.T) {
 }
 
 func TestChain_SkipsNil(t *testing.T) {
-	called := false
+	isCalled := false
 	fn := chain(
-		func(context.Context) (int64, error) { called = true; return 0, nil },
+		func(context.Context) (int64, error) { isCalled = true; return 0, nil },
 		[]Middleware{nil, nil},
 	)
 
 	if _, err := fn(context.Background()); err != nil {
 		t.Fatalf("chain: %v", err)
 	}
-	if !called {
-		t.Fatal("the work was not called")
+	if !isCalled {
+		t.Fatal("the work was not isCalled")
 	}
 }

@@ -1,7 +1,7 @@
 # job
 
 <!--suppress HtmlDeprecatedAttribute -->
-<p align="center"><img src="logo.svg" alt="job — Go gopher peeking over a line" width="240"></p>
+<p align="center"><img src="logo.svg" alt="job - Go gopher peeking over a line" width="240"></p>
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/uchaloop/job.svg)](https://pkg.go.dev/github.com/uchaloop/job) [![CI](https://github.com/uchaloop/job/actions/workflows/ci.yml/badge.svg)](https://github.com/uchaloop/job/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/tag/uchaloop/job?label=release)](https://github.com/uchaloop/job/tags) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -21,7 +21,9 @@ middleware, its timeout and its classification are written once.
 
 ## Installation
 
-Requires Go 1.27 or later.
+Requires Go 1.27 or later. This README describes the current branch, including
+unreleased API renames listed in [CHANGELOG](CHANGELOG.md). Published releases
+retain their tagged API.
 
 ```bash
 go get github.com/uchaloop/job
@@ -77,13 +79,17 @@ flowchart LR
 
 `Run` calls the chain at most once, synchronously, and waits for it to return.
 A caller's context that is already done skips the work entirely and reports why,
-measuring nothing.
+measuring nothing. A nil context returns `ErrContextIsNil` with `OutcomeError`;
+a nil or zero Runner returns `ErrRunnerIsInvalid`. Neither invokes work or callbacks.
+Create runners with `MakeRunner`; middleware returning nil is rejected with
+`ErrMiddlewareFuncIsNil`. Middleware and handler input slices are copied, while
+the referenced functions and handler instances remain shared.
 
 | Field | Meaning |
 |---|---|
-| `Start`, `Duration` | Start and total duration, including optional ErrorHandler |
+| `StartedAt`, `Duration` | Start time and total duration, including optional ErrorHandler |
 | `WorkDuration`, `ErrorHandlerDuration` | Time spent in each stage |
-| `ErrorHandlerCalled` | Whether error processing ran, even if its duration is zero |
+| `IsErrorHandlerCalled` | Whether error processing ran, even if its duration is zero |
 | `ErrorHandlerErr` | Callback error and/or expired callback context, separate from the work error |
 | `Processed` | What the work reported, kept even when it then failed |
 | `Err` | The chain's error, which stays nil when a timeout cut a quiet Func short |
@@ -149,11 +155,13 @@ They propagate by default. To turn one into a `*job.PanicError` on the result
 instead, add `job/middleware/recovery`:
 
 ```go
-job.WithMiddleware(recovery.Middleware(recovery.WithLogger(logger)))
+job.WithMiddleware(recovery.MakeMiddleware(recovery.WithLogger(logger)))
 ```
 
 It protects only the wrapped work - not a handler, not goroutines the work
-started.
+started. Error text and optional recovery logging omit the panic value and stack.
+`PanicError.Value` and `Stack` remain available for explicit inspection and may
+contain secrets; sanitize them before logging or serialization.
 
 ## Choosing which process runs the work
 
@@ -171,11 +179,11 @@ if err != nil {
     return err
 }
 
-decision, err := rotation.Decide(assignment.Invocation{ScheduledFor: point})
+decision, err := rotation.Decide(assignment.Invocation{ScheduledAt: point})
 if err != nil {
     return err
 }
-// Call Runner.Run only when decision.Execute is true.
+// Call Runner.Run only when decision.IsExecutable is true.
 ```
 
 It reads no clock and keeps no state, so every process computes the same answer
@@ -221,7 +229,9 @@ go get github.com/uchaloop/jobfx@v0.1.0
 Provide `job.Config` and `job.Func`, then use `jobfx.Module()` and
 `fx.Populate(&runner)`. The application starts dependencies, calls `runner.Run`
 once, observes the result and stops dependencies with a fresh cleanup budget.
-The adapter's executable example uses `app.Wait()` for Fx shutdown requests.
+The new jobfx App API automates that sequence with explicit Start/Stop and
+optional CLI integration. It is not available in the pinned v0.1.0 above;
+see the adapter documentation for release availability.
 
 ## Documentation
 
@@ -249,7 +259,7 @@ if err != nil {
 // Pass cfg to job.MakeRunner.
 ```
 
-Import `github.com/uchaloop/confmaker`. No Fx dependency is needed.
+Import `github.com/uchaloop/confmaker/v2`. No Fx dependency is needed.
 
 Example environment: `JOB_TIMEOUT=3m`.
 

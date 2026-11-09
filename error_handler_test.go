@@ -73,13 +73,13 @@ func TestErrorHandler_NotCalledWithoutReturnedError(t *testing.T) {
 		r := mustRunner(t, Config{Timeout: time.Second}, func(context.Context) (int64, error) { time.Sleep(2 * time.Second); return 0, nil },
 			WithErrorHandler(func(context.Context, error) error { calls++; return nil }))
 		result := r.Run(context.Background())
-		if calls != 0 || result.ErrorHandlerCalled || result.Outcome != OutcomeTimeout {
+		if calls != 0 || result.IsErrorHandlerCalled || result.Outcome != OutcomeTimeout {
 			t.Fatalf("calls=%d result=%+v", calls, result)
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		result = r.Run(ctx)
-		if calls != 0 || result.ErrorHandlerCalled || !result.Start.IsZero() {
+		if calls != 0 || result.IsErrorHandlerCalled || !result.StartedAt.IsZero() {
 			t.Fatalf("skipped result=%+v calls=%d", result, calls)
 		}
 	})
@@ -119,11 +119,11 @@ func TestErrorHandler_CalledEvenWithZeroDuration(t *testing.T) {
 		work := func(context.Context) (int64, error) { return 0, errors.New("work") }
 		r := mustRunner(t, Config{}, work, WithErrorHandler(func(context.Context, error) error { return nil }))
 		result := r.Run(context.Background())
-		if !result.ErrorHandlerCalled || result.ErrorHandlerDuration != 0 || result.ErrorHandlerErr != nil {
+		if !result.IsErrorHandlerCalled || result.ErrorHandlerDuration != 0 || result.ErrorHandlerErr != nil {
 			t.Fatalf("instant callback: %+v", result)
 		}
 		r = mustRunner(t, Config{}, work)
-		if result := r.Run(context.Background()); result.ErrorHandlerCalled {
+		if result := r.Run(context.Background()); result.IsErrorHandlerCalled {
 			t.Fatal("absent callback marked called")
 		}
 	})

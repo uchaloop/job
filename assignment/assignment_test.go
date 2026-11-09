@@ -56,7 +56,7 @@ func TestMakeRotation_SortsAndCopies(t *testing.T) {
 
 	clusters[0] = "zz"
 
-	decision, err := rotation.Decide(Invocation{ScheduledFor: at(0)})
+	decision, err := rotation.Decide(Invocation{ScheduledAt: at(0)})
 	if err != nil {
 		t.Fatalf("Decide: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestDecide_PermutationsAgree(t *testing.T) {
 		for _, clusters := range permutations {
 			rotation := mustRotation(t, Config{Clusters: clusters, Current: "el", Period: 4 * time.Hour})
 
-			decision, err := rotation.Decide(Invocation{ScheduledFor: at(time.Duration(slot) * 4 * time.Hour)})
+			decision, err := rotation.Decide(Invocation{ScheduledAt: at(time.Duration(slot) * 4 * time.Hour)})
 			if err != nil {
 				t.Fatalf("Decide: %v", err)
 			}
@@ -115,7 +115,7 @@ func TestDecide_RotatesInSortedOrder(t *testing.T) {
 
 	for slot, owner := range want {
 		decision, err := rotation.Decide(Invocation{
-			ScheduledFor: at(time.Duration(slot) * 4 * time.Hour),
+			ScheduledAt: at(time.Duration(slot) * 4 * time.Hour),
 		})
 		if err != nil {
 			t.Fatalf("Decide: %v", err)
@@ -124,8 +124,11 @@ func TestDecide_RotatesInSortedOrder(t *testing.T) {
 		if decision.Owner != owner {
 			t.Errorf("slot %d owner = %q, want %q", slot, decision.Owner, owner)
 		}
-		if got := decision.Execute; got != (owner == "el") {
-			t.Errorf("slot %d Execute = %v for owner %q", slot, got, owner)
+		if isExecutable := decision.IsExecutable; isExecutable != (owner == "el") {
+			t.Errorf("slot %d IsExecutable = %v for owner %q",
+				slot,
+				isExecutable,
+				owner)
 		}
 	}
 }
@@ -135,11 +138,11 @@ func TestDecide_SingleCluster(t *testing.T) {
 	rotation := mustRotation(t, Config{Clusters: []string{"el"}, Current: "el", Period: time.Minute})
 
 	for slot := range int64(5) {
-		decision, err := rotation.Decide(Invocation{ScheduledFor: at(time.Duration(slot) * time.Minute)})
+		decision, err := rotation.Decide(Invocation{ScheduledAt: at(time.Duration(slot) * time.Minute)})
 		if err != nil {
 			t.Fatalf("Decide: %v", err)
 		}
-		if !decision.Execute || decision.Owner != "el" {
+		if !decision.IsExecutable || decision.Owner != "el" {
 			t.Errorf("slot %d = %+v, want el executing", slot, decision)
 		}
 	}
@@ -165,7 +168,7 @@ func TestDecide_Rejects(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := rotation.Decide(Invocation{ScheduledFor: tc.when}); err == nil {
+			if _, err := rotation.Decide(Invocation{ScheduledAt: tc.when}); err == nil {
 				t.Error("accepted an invalid invocation")
 			}
 		})
@@ -180,7 +183,7 @@ func TestDecide_OwnerFollowsThePointNotTheClock(t *testing.T) {
 		Period:   4 * time.Hour,
 	})
 
-	point := Invocation{ScheduledFor: at(4 * time.Hour)} // slot 1, owner el
+	point := Invocation{ScheduledAt: at(4 * time.Hour)} // slot 1, owner el
 
 	first, err := rotation.Decide(point)
 	if err != nil {
@@ -196,7 +199,7 @@ func TestDecide_OwnerFollowsThePointNotTheClock(t *testing.T) {
 	if first != second {
 		t.Errorf("the same point gave %+v then %+v", first, second)
 	}
-	if !first.Execute {
+	if !first.IsExecutable {
 		t.Errorf("slot 1 should belong to el, got %q", first.Owner)
 	}
 }
@@ -216,11 +219,11 @@ func TestDecide_LocationDoesNotChangeTheOwner(t *testing.T) {
 		t.Skip(err)
 	}
 
-	a, err := rotation.Decide(Invocation{ScheduledFor: utc})
+	a, err := rotation.Decide(Invocation{ScheduledAt: utc})
 	if err != nil {
 		t.Fatalf("Decide: %v", err)
 	}
-	b, err := rotation.Decide(Invocation{ScheduledFor: utc.In(elsewhere)})
+	b, err := rotation.Decide(Invocation{ScheduledAt: utc.In(elsewhere)})
 	if err != nil {
 		t.Fatalf("Decide: %v", err)
 	}
@@ -271,11 +274,11 @@ func TestOwnedAfter_MatchesAWalk(t *testing.T) {
 			for count := range uint64(24) {
 				var want uint64
 				for slot := after + 1; slot <= after+count; slot++ {
-					decision, err := rotation.Decide(Invocation{ScheduledFor: at(time.Duration(slot) * time.Minute)})
+					decision, err := rotation.Decide(Invocation{ScheduledAt: at(time.Duration(slot) * time.Minute)})
 					if err != nil {
 						t.Fatal(err)
 					}
-					if decision.Execute {
+					if decision.IsExecutable {
 						want++
 					}
 				}
@@ -321,11 +324,11 @@ func TestOwnedAfter_MatchesUnboundedInterval(t *testing.T) {
 func TestDecide_LastRepresentableNanosecond(t *testing.T) {
 	rotation := mustRotation(t, Config{Clusters: []string{"el"}, Current: "el", Period: time.Nanosecond})
 	last := time.Unix(0, math.MaxInt64)
-	decision, err := rotation.Decide(Invocation{ScheduledFor: last})
+	decision, err := rotation.Decide(Invocation{ScheduledAt: last})
 	if err != nil || decision.Slot != uint64(math.MaxInt64) {
 		t.Fatalf("decision=%+v err=%v", decision, err)
 	}
-	if _, err := rotation.Decide(Invocation{ScheduledFor: last.Add(time.Nanosecond)}); err == nil {
+	if _, err := rotation.Decide(Invocation{ScheduledAt: last.Add(time.Nanosecond)}); err == nil {
 		t.Fatal("accepted a point beyond the supported time range")
 	}
 }

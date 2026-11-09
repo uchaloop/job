@@ -12,11 +12,11 @@ from the same configuration, so nothing has to be coordinated at run time.
 		Period:   5 * time.Minute,
 	})
 
-	decision, err := rotation.Decide(assignment.Invocation{ScheduledFor: point})
+	decision, err := rotation.Decide(assignment.Invocation{ScheduledAt: point})
 
 Ownership rotates over the clusters in sorted order, one point each:
 
-	slot    = (ScheduledFor - Unix epoch) / Period
+	slot    = (ScheduledAt - Unix epoch) / Period
 	owner   = sorted(Clusters)[slot % len(Clusters)]
 	execute = owner == Current
 
@@ -89,18 +89,18 @@ type Config struct {
 
 // Invocation is the scheduled point a decision is about.
 type Invocation struct {
-	// ScheduledFor is the nominal point of the grid, before any per-replica
+	// ScheduledAt is the nominal point of the grid, before any per-replica
 	// offset. It is an identity, not a measurement: a late start or a retry
 	// carries the point it was meant to serve.
-	ScheduledFor time.Time
+	ScheduledAt time.Time
 }
 
 // Decision is what the policy concluded about one point.
 type Decision struct {
-	Invocation Invocation
-	Slot       uint64
-	Owner      string
-	Execute    bool
+	Invocation   Invocation
+	Slot         uint64
+	Owner        string
+	IsExecutable bool
 }
 
 // Rotation answers who owns a scheduled point. Build it with MakeRotation; it
@@ -176,28 +176,28 @@ func (r *Rotation) Current() string { return r.current }
 // Supported instants range from the Unix epoch through epoch + MaxInt64
 // nanoseconds, inclusive. The unsigned Slot does not extend this time range.
 func (r *Rotation) Decide(in Invocation) (Decision, error) {
-	if in.ScheduledFor.IsZero() {
+	if in.ScheduledAt.IsZero() {
 		return Decision{}, errors.New("scheduled point is required")
 	}
 
-	elapsed, ok := nanosSinceEpoch(in.ScheduledFor)
-	if !ok {
-		return Decision{}, fmt.Errorf("scheduled point %v is outside the representable range", in.ScheduledFor)
+	elapsed, isOK := nanosSinceEpoch(in.ScheduledAt)
+	if !isOK {
+		return Decision{}, fmt.Errorf("scheduled point %v is outside the representable range", in.ScheduledAt)
 	}
 
 	period := int64(r.period)
 	if elapsed%period != 0 {
-		return Decision{}, fmt.Errorf("scheduled point %v is not on the %v grid", in.ScheduledFor, r.period)
+		return Decision{}, fmt.Errorf("scheduled point %v is not on the %v grid", in.ScheduledAt, r.period)
 	}
 
 	slot := uint64(elapsed / period)
 	owner := r.clusters[slot%uint64(len(r.clusters))]
 
 	return Decision{
-		Invocation: in,
-		Slot:       slot,
-		Owner:      owner,
-		Execute:    owner == r.current,
+		Invocation:   in,
+		Slot:         slot,
+		Owner:        owner,
+		IsExecutable: owner == r.current,
 	}, nil
 }
 

@@ -34,8 +34,8 @@ func TestRun_ReportsTheWork(t *testing.T) {
 	if result.Err != nil {
 		t.Errorf("Err = %v, want nil", result.Err)
 	}
-	if result.Start.IsZero() {
-		t.Error("Start is zero although the work ran")
+	if result.StartedAt.IsZero() {
+		t.Error("StartedAt is zero although the work ran")
 	}
 }
 
@@ -116,9 +116,9 @@ func TestRun_CallerCancellation(t *testing.T) {
 // A context that is already done skips the work entirely; nothing ran, so
 // nothing is measured.
 func TestRun_DoneContextSkipsTheWork(t *testing.T) {
-	called := false
+	isCalled := false
 	r := mustRunner(t, Config{}, func(context.Context) (int64, error) {
-		called = true
+		isCalled = true
 
 		return 9, nil
 	})
@@ -128,7 +128,7 @@ func TestRun_DoneContextSkipsTheWork(t *testing.T) {
 
 	result := r.Run(ctx)
 
-	if called {
+	if isCalled {
 		t.Error("the work ran although the context was already done")
 	}
 	if result.Outcome != OutcomeCanceled {
@@ -137,7 +137,7 @@ func TestRun_DoneContextSkipsTheWork(t *testing.T) {
 	if !errors.Is(result.Err, context.Canceled) {
 		t.Errorf("Err = %v, want context.Canceled", result.Err)
 	}
-	if !result.Start.IsZero() || result.Duration != 0 || result.Processed != 0 {
+	if !result.StartedAt.IsZero() || result.Duration != 0 || result.Processed != 0 {
 		t.Errorf("measured an attempt that never happened: %+v", result)
 	}
 }
