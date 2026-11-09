@@ -4,6 +4,8 @@
 
 ### Deprecated
 
+## [0.4.1] - 2026-11-09
+
 - Deprecated this module in favor of `github.com/uchaloop/beat/job`.
   See README for import-path migration. Existing API and runtime behavior remain unchanged.
 
@@ -106,7 +108,8 @@ whether a scheduler or a one-shot process runs it.
   owns the explicit sequence of start, run, observe, clean up and exit. Its
   `ExampleModule` walks through the whole of it.
 
-[Unreleased]: https://github.com/uchaloop/job/compare/v0.3.1...HEAD
+[0.4.1]: https://github.com/uchaloop/job/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/uchaloop/job/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/uchaloop/job/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/uchaloop/job/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/uchaloop/job/compare/v0.2.0...v0.2.1
