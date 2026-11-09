@@ -223,7 +223,7 @@ The optional [jobfx](https://github.com/uchaloop/jobfx) adapter is a separate
 module. The job module has no Fx dependency.
 
 ```sh
-go get github.com/uchaloop/jobfx@v0.1.0
+go get github.com/uchaloop/jobfx
 ```
 
 Provide `job.Config` and `job.Func`, then use `jobfx.Module()` and
