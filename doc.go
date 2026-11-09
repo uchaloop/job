@@ -3,8 +3,8 @@
 // It is the execution half of a scheduled job, with no opinion about when the
 // next attempt happens. A short-lived process started by a Kubernetes CronJob
 // runs one attempt and exits; github.com/uchaloop/beat runs the same work
-// repeatedly inside a long-lived process. Both use the same Runner, so the work,
-// its middleware, its timeout and its classification are written once.
+// repeatedly inside a long-lived process. Current beat releases use beat/job.Runner;
+// this standalone package is retained for existing applications.
 //
 //	runner, err := job.MakeRunner(
 //		job.Config{Timeout: 3 * time.Minute},
@@ -63,4 +63,6 @@
 // job/assignment is an optional, pure policy that picks one cluster to own a
 // scheduled point when the same deployment runs in several of them. It is off
 // unless an application asks for it, and it decides nothing about execution.
+//
+// Deprecated: Use github.com/uchaloop/beat/job instead.
 package job

@@ -1,3 +1,4 @@
+// Deprecated: Use github.com/uchaloop/beat/job instead.
 module github.com/uchaloop/job
 
 go 1.27

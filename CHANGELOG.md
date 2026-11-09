@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Deprecated
+
+- Deprecated this module in favor of `github.com/uchaloop/beat/job`.
+  See README for import-path migration. Existing API and runtime behavior remain unchanged.
+
 ## [0.4.0] - 2026-11-09
 
 ### Changed

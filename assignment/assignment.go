@@ -58,6 +58,8 @@ late, or a retry of the same scheduled Job, must decide as the original point
 did - so the caller passes that point in rather than reading a clock. A
 long-lived scheduler takes it from its own grid, before any per-replica offset:
 an offset staggers replicas, it must not move a point to another cluster.
+
+Deprecated: Use github.com/uchaloop/beat/assignment instead.
 */
 package assignment
 
