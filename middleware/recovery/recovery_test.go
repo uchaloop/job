@@ -16,7 +16,7 @@ func TestMiddleware_TurnsAPanicIntoAResult(t *testing.T) {
 	runner, err := job.MakeRunner(
 		job.Config{},
 		func(context.Context) (int64, error) { panic("boom") },
-		job.WithMiddleware(recovery.Middleware()),
+		job.WithMiddleware(recovery.MakeMiddleware()),
 	)
 	if err != nil {
 		t.Fatalf("MakeRunner: %v", err)
@@ -28,8 +28,8 @@ func TestMiddleware_TurnsAPanicIntoAResult(t *testing.T) {
 		t.Errorf("Outcome = %q, want %q", result.Outcome, job.OutcomePanic)
 	}
 
-	panicErr, ok := errors.AsType[*job.PanicError](result.Err)
-	if !ok {
+	panicErr, isOK := errors.AsType[*job.PanicError](result.Err)
+	if !isOK {
 		t.Fatalf("Err = %v, want a *job.PanicError", result.Err)
 	}
 	if panicErr.Value != "boom" {
@@ -49,7 +49,7 @@ func TestMiddleware_LogsWhenAsked(t *testing.T) {
 	runner, err := job.MakeRunner(
 		job.Config{},
 		func(context.Context) (int64, error) { panic("boom") },
-		job.WithMiddleware(recovery.Middleware(recovery.WithLogger(logger))),
+		job.WithMiddleware(recovery.MakeMiddleware(recovery.WithLogger(logger))),
 	)
 	if err != nil {
 		t.Fatalf("MakeRunner: %v", err)
@@ -57,7 +57,7 @@ func TestMiddleware_LogsWhenAsked(t *testing.T) {
 
 	runner.Run(context.Background())
 
-	if !strings.Contains(buf.String(), "job panic recovered") {
+	if !strings.Contains(buf.String(), "panic recovered") {
 		t.Errorf("nothing was logged: %q", buf.String())
 	}
 }
@@ -66,7 +66,7 @@ func TestMiddleware_LetsOrdinaryResultsThrough(t *testing.T) {
 	runner, err := job.MakeRunner(
 		job.Config{},
 		func(context.Context) (int64, error) { return 5, nil },
-		job.WithMiddleware(recovery.Middleware(), nil),
+		job.WithMiddleware(recovery.MakeMiddleware(), nil),
 	)
 	if err != nil {
 		t.Fatalf("MakeRunner: %v", err)
@@ -74,5 +74,28 @@ func TestMiddleware_LetsOrdinaryResultsThrough(t *testing.T) {
 
 	if result := runner.Run(context.Background()); result.Processed != 5 || result.Outcome != job.OutcomeOK {
 		t.Errorf("result = %+v, want 5 processed and ok", result)
+	}
+}
+
+func TestPanicDiagnosticsDoNotExposeValue(t *testing.T) {
+	const token = "synthetic-private-token"
+	var output bytes.Buffer
+	runner, err := job.MakeRunner(
+		job.Config{},
+		func(context.Context) (int64, error) { panic(token) },
+		job.WithMiddleware(recovery.MakeMiddleware(recovery.WithLogger(slog.New(slog.NewJSONHandler(&output, nil))))),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := runner.Run(context.Background())
+	if strings.Contains(result.Err.Error(), token) || strings.Contains(output.String(), token) || strings.Contains(output.String(), "stack") {
+		t.Fatal("sensitive panic details in automatic diagnostics")
+	}
+
+	panicErr, isOK := errors.AsType[*job.PanicError](result.Err)
+	if !isOK || panicErr.Value != token || len(panicErr.Stack) == 0 || result.Outcome != job.OutcomePanic {
+		t.Fatal("explicit panic inspection lost")
 	}
 }

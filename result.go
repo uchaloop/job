@@ -1,7 +1,6 @@
 package job
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -37,9 +36,9 @@ const (
 
 // Result describes one completed attempt.
 type Result struct {
-	// Start is the wall-clock time the attempt began. It is the zero Time when
+	// StartedAt is the wall-clock time the attempt began. It is the zero Time when
 	// the caller's context was already done and the work was never called.
-	Start time.Time
+	StartedAt time.Time
 
 	// Duration covers the whole attempt, including ErrorHandler when called.
 	// Observability handlers are not part of it.
@@ -48,9 +47,9 @@ type Result struct {
 	// WorkDuration measures the Func and middleware only.
 	WorkDuration time.Duration
 
-	// ErrorHandlerCalled distinguishes an invoked callback from an absent one,
+	// IsErrorHandlerCalled distinguishes an invoked callback from an absent one,
 	// including callbacks that finish without advancing the clock.
-	ErrorHandlerCalled bool
+	IsErrorHandlerCalled bool
 
 	// ErrorHandlerDuration measures the error callback, or zero when not called.
 	ErrorHandlerDuration time.Duration
@@ -80,11 +79,13 @@ type Result struct {
 //
 // The runner does not recover panics; without the recovery middleware a panic
 // propagates to whoever called Run.
+// Value and Stack may contain sensitive data. Do not serialize or log them
+// without application-specific sanitization. Error deliberately omits both.
 type PanicError struct {
 	Value any
 	Stack []byte
 }
 
 func (e *PanicError) Error() string {
-	return fmt.Sprintf("recovered from panic: %v", e.Value)
+	return "recovered from panic"
 }

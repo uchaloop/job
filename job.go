@@ -20,7 +20,7 @@ type Func func(ctx context.Context) (int64, error)
 
 // Middleware wraps a Func to add behaviour around it - recovery, context
 // enrichment, extra logging. It is classic Go composition: a Middleware
-// receives the next Func and returns a Func that calls it.
+// receives the next Func and returns a non-nil Func that calls it.
 //
 // A Middleware must keep the one-attempt contract: it may suppress the call to
 // next, but must not call it twice or concurrently. Deciding when the next
@@ -34,6 +34,10 @@ func chain(fn Func, mws []Middleware) Func {
 	for _, mw := range slices.Backward(mws) {
 		if mw != nil {
 			fn = mw(fn)
+
+			if fn == nil {
+				return nil
+			}
 		}
 	}
 

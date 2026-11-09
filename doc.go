@@ -11,7 +11,7 @@
 //		func(ctx context.Context) (int64, error) {
 //			return queue.ProcessBatch(ctx, 1000)
 //		},
-//		job.WithMiddleware(recovery.Middleware()),
+//		job.WithMiddleware(recovery.MakeMiddleware()),
 //	)
 //
 //	result := runner.Run(ctx)

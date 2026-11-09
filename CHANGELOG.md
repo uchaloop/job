@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** Renamed `Result.Start` to `StartedAt`, `ErrorHandlerCalled` to
+  `IsErrorHandlerCalled`, `assignment.Invocation.ScheduledFor` to `ScheduledAt`
+  and `assignment.Decision.Execute` to `IsExecutable`.
+- **Breaking:** Renamed `MultiHandler` to `MakeMultiHandler` and
+  `recovery.Middleware` to `recovery.MakeMiddleware`.
+- Defined nil-context and uninitialized Runner results as `OutcomeError`, with
+  recognizable errors and no callback invocation.
+
+### Fixed
+
+- Copied middleware and handler input slices to isolate composition from caller
+  mutations. Referenced functions and handler objects remain shared.
+- Rejected nil functions returned by middleware during runner construction.
+
+### Security
+
+- Removed raw panic values and stacks from automatic recovery logging and panic
+  error text. Explicit `PanicError.Value` and `Stack` inspection remains available
+  and requires application-specific sanitization.
+
 ## [0.3.1]
 
 - Removed `Config.ConfigName`; applications now register an explicit instance name.
@@ -77,11 +99,9 @@ whether a scheduler or a one-shot process runs it.
   owns the explicit sequence of start, run, observe, clean up and exit. Its
   `ExampleModule` walks through the whole of it.
 
+[Unreleased]: https://github.com/uchaloop/job/compare/v0.3.1...HEAD
 [0.3.1]: https://github.com/uchaloop/job/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/uchaloop/job/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/uchaloop/job/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/uchaloop/job/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/uchaloop/job/releases/tag/v0.1.0
-
-
-

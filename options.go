@@ -1,6 +1,9 @@
 package job
 
-import "context"
+import (
+	"context"
+	"slices"
+)
 
 // settings holds the resolved options for one Runner.
 type settings struct {
@@ -18,8 +21,11 @@ func (f optionFunc) apply(s *settings) { f(s) }
 // WithMiddleware wraps the work. The first middleware is the outermost layer
 // and therefore runs first, which is the order the call reads in. Nil entries
 // are skipped, and the chain is composed once, when the Runner is built.
-func WithMiddleware(mw ...Middleware) Option {
-	return optionFunc(func(s *settings) { s.middleware = append(s.middleware, mw...) })
+// The input slice is copied; referenced middleware state remains caller-owned.
+func WithMiddleware(middleware ...Middleware) Option {
+	middleware = slices.Clone(middleware)
+
+	return optionFunc(func(s *settings) { s.middleware = append(s.middleware, middleware...) })
 }
 
 // ErrorHandler handles a non-nil error returned by the work and middleware.

@@ -9,10 +9,10 @@ func TestConfigValidate(t *testing.T) {
 	tests := []struct {
 		name string
 		cfg  Config
-		ok   bool
+		isOK bool
 	}{
-		{name: "zero means the default", cfg: Config{}, ok: true},
-		{name: "a positive timeout", cfg: Config{Timeout: time.Second}, ok: true},
+		{name: "zero means the default", cfg: Config{}, isOK: true},
+		{name: "a positive timeout", cfg: Config{Timeout: time.Second}, isOK: true},
 		{name: "a negative timeout", cfg: Config{Timeout: -time.Second}},
 	}
 
@@ -20,10 +20,10 @@ func TestConfigValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.cfg.Validate()
 
-			if tc.ok && err != nil {
+			if tc.isOK && err != nil {
 				t.Errorf("rejected a valid config: %v", err)
 			}
-			if !tc.ok && err == nil {
+			if !tc.isOK && err == nil {
 				t.Error("accepted an invalid config")
 			}
 		})
